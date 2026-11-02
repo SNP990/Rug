@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>حساب أثمنة الطابي</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Cairo', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen py-8 px-4 flex items-center justify-center">
+
+    <div class="max-w-xl w-full bg-white rounded-2xl shadow-xl border border-slate-100 p-6 md:p-8">
+        
+        <!-- Input Form Section -->
+        <div class="space-y-6">
+            <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2 border-b pb-3">
+                <span>📏</span> إدخال قياسات الزبون والثمن
+            </h2>
+
+            <!-- Price Per Square Meter Input Card -->
+            <div class="bg-amber-50/60 border border-amber-200/60 p-4 rounded-xl space-y-2">
+                <label class="block text-sm font-bold text-amber-900">
+                    ثمن المتر المربع (درهم / م²) *
+                </label>
+                <div class="relative">
+                    <input type="number" id="unitPrice" value="80" step="0.01" min="1"
+                        class="w-full bg-white border border-amber-300 rounded-lg px-4 py-3 text-lg font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-semibold">درهم/م²</span>
+                </div>
+                <p class="text-xs text-amber-700/80">يمكنك تغيير الثمن الافتراضي (80 درهم) حسب الحاجة</p>
+            </div>
+
+            <!-- Dimensions Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Width Input -->
+                <div class="space-y-2">
+                    <label class="block text-sm font-bold text-slate-700">العرض (بالستر) *</label>
+                    <div class="relative">
+                        <input type="text" id="widthInput" placeholder="مثال: 2.20 أو 180 (سم)"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">متر</span>
+                    </div>
+                    <p class="text-xs text-slate-500">يقبل المتر (1.80) أو السنتيمتر (180)</p>
+                </div>
+
+                <!-- Length Input -->
+                <div class="space-y-2">
+                    <label class="block text-sm font-bold text-slate-700">الطول (بالستر) *</label>
+                    <div class="relative">
+                        <input type="text" id="lengthInput" placeholder="مثال: 5.00 أو 500 (سم)"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">متر</span>
+                    </div>
+                    <p class="text-xs text-slate-500">يقبل المتر (5.00) أو السنتيمتر (500)</p>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-3 pt-2">
+                <button onclick="resetCalculator()" title="إعادة ضبط" class="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-semibold transition-all flex items-center justify-center">
+                    🔄
+                </button>
+                <button onclick="calculatePrice()" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 text-lg">
+                    <span>🧮</span> حسب الثمن الإجمالي
+                </button>
+            </div>
+        </div>
+
+        <!-- Result Container -->
+        <div id="resultContainer" class="mt-6 hidden"></div>
+
+    </div>
+
+    <script>
+        function parseMeasurement(value) {
+            if (!value) return NaN;
+            let valStr = String(value).trim().replace(',', '.');
+            let num = parseFloat(valStr);
+            if (isNaN(num)) return NaN;
+            if (num > 10 || valStr.includes('سم') || (num > 3 && !valStr.includes('.'))) {
+                if (num > 10) return num / 100;
+            }
+            return num;
+        }
+
+        function calculatePrice() {
+            const rawWidthInput = document.getElementById('widthInput').value;
+            const rawLengthInput = document.getElementById('lengthInput').value;
+            const rate = parseFloat(document.getElementById('unitPrice').value) || 80;
+
+            const W = parseMeasurement(rawWidthInput);
+            const L = parseMeasurement(rawLengthInput);
+            const container = document.getElementById('resultContainer');
+
+            if (isNaN(W) || isNaN(L) || W <= 0 || L <= 0) {
+                alert('المرجو إدخال قياسات صحيحة للعرض والطول.');
+                return;
+            }
+
+            let resultHTML = '';
+
+            // Rule: Width between 3m and 6m -> Split into 2 equal rugs
+            if (W > 3 && W <= 6) {
+                let splitW = W / 2;
+                let finalW, finalL = L;
+                let excessCm = 0;
+                let calcText = '';
+                let rugPrice = 0;
+
+                if (splitW >= 2) {
+                    if (splitW <= 2.5) finalW = 2.5;
+                    else finalW = 3.0;
+                    excessCm = Math.round((finalW - splitW) * 100);
+                    rugPrice = finalW * finalL * rate;
+                    calcText = `${finalW} × ${finalL} × ${rate} = ${rugPrice}`;
+                } else {
+                    if (L <= 3) {
+                        finalW = splitW;
+                        if (L <= 2) finalL = 2.0;
+                        else if (L <= 2.5) finalL = 2.5;
+                        else finalL = 3.0;
+                        excessCm = 0;
+                        rugPrice = finalW * finalL * rate;
+                        calcText = `${finalW} × ${finalL} × ${rate} = ${rugPrice}`;
+                    } else {
+                        finalW = 2.0;
+                        excessCm = Math.round((finalW - splitW) * 100);
+                        rugPrice = finalW * finalL * rate;
+                        calcText = `${finalW} × ${finalL} × ${rate} = ${rugPrice}`;
+                    }
+                }
+
+                let totalPrice = rugPrice * 2;
+
+                let questionText = excessCm > 0 
+                    ? `غادي يبقاو ليك جوج أطراف زائدة من الطابي، كل واحد فيه (${excessCm} سم × ${finalL} متر). واش بغيتي نقطعوهم ليك ونرسلوهم مع الطلبية، ولا نخليوهم ملصقين بالطابيات إلا عندك فين تزيدهم من تحت السدادر، أو نقطعو ليك الطابيات على القياس ديالك تماماً باش يجيوك مقادين؟`
+                    : null;
+
+                resultHTML = `
+                    <div class="bg-amber-50/50 border border-amber-200 rounded-xl p-5 space-y-4 text-right">
+                        <div class="text-amber-800 font-bold text-sm bg-amber-100/70 p-2.5 rounded-lg">
+                            🚨 تنبيه للفريق: هاد الطلب فيه جوج طابيات متساويين!
+                        </div>
+                        <div class="space-y-3 text-slate-700 text-sm border-b pb-3">
+                            <p class="font-bold text-slate-900">الطابية رقم 1:</p>
+                            <p>📏 العرض الحقيقي: ${splitW.toFixed(2)} متر</p>
+                            <p>📦 العرض المعتمد: ${finalW} متر</p>
+                            <p>📐 الطول: ${finalL} متر</p>
+                            <p>🧮 الحساب: ${calcText}</p>
+                            <p class="font-bold text-amber-700">💰 الثمن: ${rugPrice} درهم</p>
+                            ${excessCm > 0 ? `<p class="text-rose-600 font-semibold">✂️ الطرف الزائد: ${excessCm} سم × ${finalL} متر</p>` : ''}
+                        </div>
+                        <div class="space-y-3 text-slate-700 text-sm">
+                            <p class="font-bold text-slate-900">الطابية رقم 2:</p>
+                            <p>📏 العرض الحقيقي: ${splitW.toFixed(2)} متر</p>
+                            <p>📦 العرض المعتمد: ${finalW} متر</p>
+                            <p>📐 الطول: ${finalL} متر</p>
+                            <p>🧮 الحساب: ${calcText}</p>
+                            <p class="font-bold text-amber-700">💰 الثمن: ${rugPrice} درهم</p>
+                            ${excessCm > 0 ? `<p class="text-rose-600 font-semibold">✂️ الطرف الزائد: ${excessCm} سم × ${finalL} متر</p>` : ''}
+                        </div>
+                        <div class="bg-slate-900 text-white p-4 rounded-xl text-center font-black text-xl">
+                            TOTAL PRICE: ${totalPrice} DH
+                        </div>
+                        ${questionText ? `
+                            <div class="bg-blue-50 border border-blue-200 p-4 rounded-xl space-y-2">
+                                <p class="text-blue-900 font-bold">📞 سولو الزبون:</p>
+                                <p class="text-blue-800 text-sm leading-relaxed">"${questionText}"</p>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            } else if (W > 6) {
+                alert('العرض أكبر من 6 متر، اطلب توضيحاً قبل الحساب.');
+                return;
+            } else {
+                // Single rug logic
+                let finalW, finalL = L;
+                let excessCm = 0;
+                let isExceptionCase = false;
+
+                if (W < 2) {
+                    if (L <= 3) {
+                        isExceptionCase = true;
+                        finalW = W;
+                        if (L <= 2) finalL = 2.0;
+                        else if (L <= 2.5) finalL = 2.5;
+                        else finalL = 3.0;
+                        excessCm = 0;
+                    } else {
+                        finalW = 2.0;
+                        finalL = L;
+                        excessCm = Math.round((finalW - W) * 100);
+                    }
+                } else {
+                    if (W <= 2.0) finalW = 2.0;
+                    else if (W <= 2.5) finalW = 2.5;
+                    else finalW = 3.0;
+                    excessCm = Math.round((finalW - W) * 100);
+                }
+
+                let totalPrice = finalW * finalL * rate;
+                let calcFormula = `${finalW} × ${finalL} × ${rate} = ${totalPrice}`;
+                
+                let questionText = excessCm > 0 
+                    ? `واش بغيتي نقطعو ليك الطرف الزائد (${excessCm} سم × ${finalL} متر) ونرسلوه ليك مع الطلبية، ولا تخليه مع الطابي إلا عندك فين تزيدو من تحت السدادر، أو نقطعو الطابي على القياس ديالك تماماً باش يجيك مقاد؟`
+                    : null;
+
+                resultHTML = `
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-3 text-right">
+                        <p>📏 <strong>العرض ديال الزبون:</strong> ${W} متر</p>
+                        <p>📐 <strong>الطول ديال الزبون:</strong> ${L} متر</p>
+                        <p>📦 <strong>العرض المعتمد:</strong> ${finalW} متر</p>
+                        ${isExceptionCase ? `<p>📐 <strong>الطول المعتمد:</strong> ${finalL} متر</p>` : ''}
+                        <p>🧮 <strong>العملية الحسابية:</strong> ${calcFormula}</p>
+                        <div class="bg-slate-900 text-white p-3 rounded-lg text-center font-black text-lg">
+                            TOTAL PRICE: ${totalPrice} DH
+                        </div>
+                        ${excessCm > 0 ? `<p class="text-rose-600 font-semibold text-sm">✂️ الطرف الزائد: ${excessCm} سم × ${finalL} متر</p>` : ''}
+                        ${questionText ? `
+                            <div class="bg-blue-50 border border-blue-200 p-4 rounded-xl space-y-2 mt-3">
+                                <p class="text-blue-900 font-bold">📞 سولو الزبون:</p>
+                                <p class="text-blue-800 text-sm leading-relaxed">"${questionText}"</p>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            container.innerHTML = resultHTML;
+            container.classList.remove('hidden');
+        }
+
+        function resetCalculator() {
+            document.getElementById('widthInput').value = '';
+            document.getElementById('lengthInput').value = '';
+            document.getElementById('unitPrice').value = '80';
+            const container = document.getElementById('resultContainer');
+            container.innerHTML = '';
+            container.classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
